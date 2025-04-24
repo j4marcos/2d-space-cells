@@ -64,6 +64,8 @@ public:
     std::shared_ptr<Player> add_player();
     void apply_command(int player_id, bool thrust, bool left, bool right, bool shoot);
     std::string get_state_json();
+    void remove_player(int player_id);
+    
 
 private:
     std::unordered_map<int, std::shared_ptr<Player>> all_players;

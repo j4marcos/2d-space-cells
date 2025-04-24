@@ -1,3 +1,4 @@
 node_modules/
 dist/
 diep_server
+*.o

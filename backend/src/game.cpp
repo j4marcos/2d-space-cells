@@ -6,6 +6,7 @@
 #include <thread>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <iostream>
 
 using json = nlohmann::json;
 
@@ -56,6 +57,22 @@ std::shared_ptr<Player> GameWorld::add_player() {
     all_players[p->id] = p;
     quadrants[0].players.push_back(p); // provisoriamente quadrante 0
     return p;
+}
+
+void GameWorld::remove_player(int player_id) {
+    std::lock_guard<std::mutex> lock(global_mutex);
+
+    // Remover o jogador do mapa de jogadores
+    if (all_players.count(player_id)) {
+        all_players.erase(player_id);
+        std::cout << "Jogador " << player_id << " removido do jogo.\n";
+    }
+
+    // Remover o jogador de todos os quadrantes
+    for (auto& quad : quadrants) {
+        quad.players.erase(std::remove_if(quad.players.begin(), quad.players.end(),
+            [player_id](std::shared_ptr<Player>& player) { return player->id == player_id; }), quad.players.end());
+    }
 }
 
 void GameWorld::apply_command(int player_id, bool thrust, bool left, bool right, bool shoot) {

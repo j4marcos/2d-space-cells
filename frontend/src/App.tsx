@@ -21,7 +21,10 @@ const App: React.FC = () => {
       const data = JSON.parse(msg.data);
       console.log('Received data:', data);
       if (data.type === 'register') {
-        setPlayerId(data.player_id);
+        // Verifica se o playerId já foi setado, evitando duplicações
+        if (!playerId) {
+          setPlayerId(data.player_id);
+        }
       } else {
         setState({
           players: data.players ?? [],

@@ -7,6 +7,7 @@
 using json = nlohmann::json;
 
 Server::Server(GameWorld* game) : game(game) {
+    server.clear_access_channels(websocketpp::log::alevel::all);  // <== remove [frame_payload]
     server.init_asio();
     server.set_open_handler([this](connection_hdl hdl) { on_open(hdl); });
     server.set_close_handler([this](connection_hdl hdl) { on_close(hdl); });
@@ -23,11 +24,19 @@ void Server::run(uint16_t port) {
 }
 
 void Server::on_open(connection_hdl hdl) {
-    auto player = game->add_player();
-    {
-        std::lock_guard<std::mutex> lock(conns_mutex);
-        connections[hdl] = player->id;
+    std::cout << "Nova conexão estabelecida.\n";
+
+    // Verifica se o jogador já está registrado nesta conexão
+    std::lock_guard<std::mutex> lock(conns_mutex);
+    if (connections.count(hdl) > 0) {
+        std::cerr << "Conexão já registrada. Ignorando.\n";
+        return;
     }
+
+    // Cria novo jogador se não existir
+    auto player = game->add_player();
+    connections[hdl] = player->id;
+
     json response = { {"type", "register"}, {"player_id", player->id} };
     server.send(hdl, response.dump(), websocketpp::frame::opcode::text);
     std::cout << "Player " << player->id << " conectado.\n";
@@ -35,8 +44,19 @@ void Server::on_open(connection_hdl hdl) {
 
 void Server::on_close(connection_hdl hdl) {
     std::lock_guard<std::mutex> lock(conns_mutex);
-    connections.erase(hdl);
-    std::cout << "Conexao encerrada.\n";
+
+    // Verificar se a conexão está registrada
+    if (connections.count(hdl) > 0) {
+        int player_id = connections[hdl];
+
+        // Remover o jogador do jogo
+        game->remove_player(player_id);  // Adicionar função de remoção no game
+
+        // Remover a conexão
+        connections.erase(hdl);
+
+        std::cout << "Conexao encerrada. Jogador " << player_id << " removido.\n";
+    }
 }
 
 void Server::on_message(connection_hdl hdl, ws_server::message_ptr msg) {
@@ -65,9 +85,16 @@ void Server::send_state_loop() {
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::string state = game->get_state_json();
+
         std::lock_guard<std::mutex> lock(conns_mutex);
-        for (auto& [hdl, _] : connections) {
-            server.send(hdl, state, websocketpp::frame::opcode::text);
+        for (auto it = connections.begin(); it != connections.end(); ) {
+            try {
+                server.send(it->first, state, websocketpp::frame::opcode::text);
+                ++it;
+            } catch (const websocketpp::exception& e) {
+                std::cerr << "[send_state_loop] erro ao enviar: " << e.what() << "\n";
+                it = connections.erase(it); // remove conexão inválida
+            }
         }
     }
 }
