@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador de Física 2D</title>
+    <style>
+        body { margin: 0; background: #222; color: white; font-family: Arial; }
+        #panel { padding: 10px; background: #333; display: flex; flex-direction: column; align-items: flex-start; }
+        #panel div { margin-bottom: 4px; }
+        canvas { background: #111; display: block; margin: 0 auto; }
+        #info { font-size: 14px; }
+        #thread_times { font-size: 12px; color: #ccc; }
+    </style>
+</head>
+<body>
+
+<div id="panel">
+    <div id="info">Objetos: 0 | FPS: 0 | Threads: 0 | Update: 0.000s</div>
+    <div id="thread_times">Thread Times: -</div>
+</div>
+
+<canvas id="field" width="1000" height="1000"></canvas>
+
+<script>
+const fieldCanvas = document.getElementById('field');
+const fieldCtx = fieldCanvas.getContext('2d');
+
+let objects = [];
+let lastFrame = performance.now();
+let fps = 0;
+
+function draw() {
+    fieldCtx.clearRect(0, 0, fieldCanvas.width, fieldCanvas.height);
+    // Draw grid based on thread count? (optional)
+
+    for (let obj of objects) {
+        fieldCtx.save();
+        fieldCtx.translate(obj.x, obj.y);
+        fieldCtx.rotate(Math.atan2(obj.vy, obj.vx));
+
+        console
+
+        if (obj.type === 0) {
+            fieldCtx.fillStyle = "cyan";
+            fieldCtx.fillRect(-10, -10, 20, 20);
+        } else {
+            fieldCtx.fillStyle = "lime";
+            fieldCtx.beginPath();
+            fieldCtx.arc(0, 0, 10, 0, 2 * Math.PI);
+            fieldCtx.fill();
+        }
+
+        fieldCtx.restore();
+    }
+}
+
+function update() {
+    fetch('/state')
+        .then(response => response.json())
+        .then(data => {
+            objects = data.objects || [];
+            draw();
+
+
+            // Calculate FPS
+            const now = performance.now();
+            fps = Math.round(1000 / (now - lastFrame));
+            lastFrame = now;
+
+            // Update main info
+            document.getElementById('info').innerText =
+                `Objetos: ${objects.length} | FPS: ${fps} | Threads: ${data.thread_count} | Update: ${data.update_time.toFixed(3)}s`;
+
+            // Update thread times
+            const times = data.thread_times.map(t => t.toFixed(3) + 's').join(', ');
+            document.getElementById('thread_times').innerText = `Thread Times: ${times}`;
+        })
+        .catch(err => console.error('Erro ao buscar estado:', err));
+}
+
+// Fetch state ~30 times per second
+setInterval(update, 33);
+
+// Click to add object
+fieldCanvas.addEventListener('click', e => {
+    const rect = fieldCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const vx = (Math.random() - 0.5) * 10;
+    const vy = (Math.random() - 0.5) * 10;
+    const type = Math.random() < 0.5 ? 0 : 1;
+    const data = `x=${x}&y=${y}&vx=${vx}&vy=${vy}&type=${type}`;
+    fetch('/input', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: data
+    }).catch(err => console.error('Erro ao criar objeto:', err));
+});
+</script>
+
+</body>
+</html>
