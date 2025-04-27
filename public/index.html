@@ -95,7 +95,7 @@ function draw(data) {
 }
 
 function update() {
-    fetch('http://localhost:8080/state')
+    fetch('/state')
         .then(response => response.json())
         .then(data => {
             objects = data.objects || [];
@@ -129,7 +129,7 @@ fieldCanvas.addEventListener('click', e => {
     const vy = (Math.random() - 0.5) * 10;
     const type = Math.floor(Math.random() * 4); // 0 a 3 (quadrado, círculo, triângulo, pentágono)
     const data = `x=${x}&y=${y}&vx=${vx}&vy=${vy}&type=${type}`;
-    fetch('http://localhost:8080/input', {
+    fetch('/input', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: data
