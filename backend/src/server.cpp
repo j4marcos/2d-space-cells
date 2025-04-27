@@ -1,100 +1,111 @@
-// backend/src/server.cpp
-#include "server.h"
-#include <websocketpp/common/thread.hpp>
-#include <nlohmann/json.hpp>
-#include <iostream>
+#include "Server.h"
 
 using json = nlohmann::json;
 
-Server::Server(GameWorld* game) : game(game) {
-    server.clear_access_channels(websocketpp::log::alevel::all);  // <== remove [frame_payload]
-    server.init_asio();
-    server.set_open_handler([this](connection_hdl hdl) { on_open(hdl); });
-    server.set_close_handler([this](connection_hdl hdl) { on_close(hdl); });
-    server.set_message_handler([this](connection_hdl hdl, ws_server::message_ptr msg) {
-        on_message(hdl, msg);
-    });
-}
+void startServer()
+{
+    httplib::Server svr;
 
-void Server::run(uint16_t port) {
-    server.listen(port);
-    server.start_accept();
-    std::thread([this]() { send_state_loop(); }).detach();
-    server.run();
-}
+    // Rota para validar o Sudoku
+    svr.Post("/validate", [](const httplib::Request &req, httplib::Response &res)
+             {
+        try {
+            // Parseia o JSON recebido
+            json request_json = json::parse(req.body);
 
-void Server::on_open(connection_hdl hdl) {
-    std::cout << "Nova conexão estabelecida.\n";
-
-    // Verifica se o jogador já está registrado nesta conexão
-    std::lock_guard<std::mutex> lock(conns_mutex);
-    if (connections.count(hdl) > 0) {
-        std::cerr << "Conexão já registrada. Ignorando.\n";
-        return;
-    }
-
-    // Cria novo jogador se não existir
-    auto player = game->add_player();
-    connections[hdl] = player->id;
-
-    json response = { {"type", "register"}, {"player_id", player->id} };
-    server.send(hdl, response.dump(), websocketpp::frame::opcode::text);
-    std::cout << "Player " << player->id << " conectado.\n";
-}
-
-void Server::on_close(connection_hdl hdl) {
-    std::lock_guard<std::mutex> lock(conns_mutex);
-
-    // Verificar se a conexão está registrada
-    if (connections.count(hdl) > 0) {
-        int player_id = connections[hdl];
-
-        // Remover o jogador do jogo
-        game->remove_player(player_id);  // Adicionar função de remoção no game
-
-        // Remover a conexão
-        connections.erase(hdl);
-
-        std::cout << "Conexao encerrada. Jogador " << player_id << " removido.\n";
-    }
-}
-
-void Server::on_message(connection_hdl hdl, ws_server::message_ptr msg) {
-    int player_id;
-    {
-        std::lock_guard<std::mutex> lock(conns_mutex);
-        if (connections.count(hdl) == 0) return;
-        player_id = connections[hdl];
-    }
-
-    try {
-        auto data = json::parse(msg->get_payload());
-        if (data["type"] == "command") {
-            bool thrust = data.value("thrust", false);
-            bool left = data.value("left", false);
-            bool right = data.value("right", false);
-            bool shoot = data.value("shoot", false);
-            game->apply_command(player_id, thrust, left, right, shoot);
-        }
-    } catch (...) {
-        std::cerr << "Mensagem inválida recebida.\n";
-    }
-}
-
-void Server::send_state_loop() {
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::string state = game->get_state_json();
-
-        std::lock_guard<std::mutex> lock(conns_mutex);
-        for (auto it = connections.begin(); it != connections.end(); ) {
-            try {
-                server.send(it->first, state, websocketpp::frame::opcode::text);
-                ++it;
-            } catch (const websocketpp::exception& e) {
-                std::cerr << "[send_state_loop] erro ao enviar: " << e.what() << "\n";
-                it = connections.erase(it); // remove conexão inválida
+            // Verifica se o campo "board" existe e é uma matriz 9x9
+            if (!request_json.contains("board") || !request_json["board"].is_array()) {
+                res.status = 400;
+                res.set_content("Invalid request: 'board' field is required and must be a 9x9 array.", "text/plain");
+                return;
             }
-        }
-    }
+
+            // Converte o JSON para um vetor de vetores de inteiros
+            std::vector<std::vector<int>> board = request_json["board"].get<std::vector<std::vector<int>>>();
+
+            // Valida o tamanho do tabuleiro
+            if (board.size() != 9 || board[0].size() != 9) {
+                res.status = 400;
+                res.set_content("Invalid board: The board must be a 9x9 grid.", "text/plain");
+                return;
+            }
+
+            // Valida o Sudoku sem threads
+            Metrics metricsNoThreads = validateSudokuNoThreads(board);
+
+            // Valida o Sudoku com threads
+            Metrics metricsWithThreads = validateSudokuWithThreads(board);
+
+            // Retorna o resultado como JSON
+            json response_json = {
+                {"no_threads", {
+                    {"is_valid", metricsNoThreads.isValid},
+                    {"execution_time_ms", metricsNoThreads.executionTimeMs},
+                    {"row_checks", metricsNoThreads.rowChecks},
+                    {"col_checks", metricsNoThreads.colChecks},
+                    {"box_checks", metricsNoThreads.boxChecks}
+                }},
+                {"with_threads", {
+                    {"is_valid", metricsWithThreads.isValid},
+                    {"execution_time_ms", metricsWithThreads.executionTimeMs},
+                    {"row_checks", metricsWithThreads.rowChecks},
+                    {"col_checks", metricsWithThreads.colChecks},
+                    {"box_checks", metricsWithThreads.boxChecks}
+                }}
+            };
+
+            res.set_content(response_json.dump(), "application/json");
+        } catch (const std::exception &e) {
+            res.status = 500;
+            res.set_content(std::string("Internal server error: ") + e.what(), "text/plain");
+        } });
+
+    // Rota para validar múltiplos Sudokus
+    svr.Get("/validate-multiple", [](const httplib::Request &req, httplib::Response &res)
+            {
+        try {
+            // Gerar 1000 tabuleiros de Sudoku aleatórios
+            std::vector<std::vector<std::vector<int>>> boards(1000);
+            for (auto &board : boards) {
+                board = generateRandomSudoku();
+            }
+
+            // Validar sem threads
+            Metrics noThreadsMetrics = validateMultipleSudokusNoThreads(boards);
+
+            // Validar com threads
+            Metrics withThreadsMetrics = validateMultipleSudokusWithThreads(boards);
+
+            // Retorna o resultado como JSON
+            json response_json = {
+                {"no_threads", {
+                    {"execution_time_ms", noThreadsMetrics.executionTimeMs},
+                    {"total_row_checks", noThreadsMetrics.rowChecks},
+                    {"total_col_checks", noThreadsMetrics.colChecks},
+                    {"total_box_checks", noThreadsMetrics.boxChecks}
+                }},
+                {"with_threads", {
+                    {"execution_time_ms", withThreadsMetrics.executionTimeMs},
+                    {"total_row_checks", withThreadsMetrics.rowChecks},
+                    {"total_col_checks", withThreadsMetrics.colChecks},
+                    {"total_box_checks", withThreadsMetrics.boxChecks}
+                }}
+            };
+
+            res.set_content(response_json.dump(), "application/json");
+        } catch (const std::exception &e) {
+            res.status = 500;
+            res.set_content(std::string("Internal server error: ") + e.what(), "text/plain");
+        } });
+
+    std::cout << "Servidor rodando em http://localhost:9002" << std::endl;
+
+    // Inicia o servidor na porta 9002
+    svr.listen("0.0.0.0", 9002);
+}
+
+int main()
+{
+    startServer();
+    return 0;
 }

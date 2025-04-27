@@ -1,33 +1,30 @@
-# backend/Dockerfile
+# Base da imagem
 FROM ubuntu:24.04
 
+# Configuração para evitar prompts interativos
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Instalação de dependências necessárias
 RUN apt-get update && \
-    apt-get install -y g++ make cmake libboost-all-dev wget unzip && \
+    apt-get install -y g++ make cmake wget nlohmann-json3-dev && \
     apt-get clean
 
-# WebSocket++
-RUN echo "Instalando WebSocket++..." && \
-    mkdir -p /usr/local/include/websocketpp && \
-    wget -q -O /tmp/websocketpp.zip https://github.com/zaphoyd/websocketpp/archive/refs/heads/master.zip && \
-    unzip -q /tmp/websocketpp.zip -d /tmp && \
-    cp -r /tmp/websocketpp-master/websocketpp /usr/local/include/ && \
-    test -f /usr/local/include/websocketpp/config/asio_no_tls.hpp && echo "WebSocket++ OK" || (echo "WebSocket++ FALHOU" && exit 1)
+# Baixa o httplib.h
+RUN wget -O /usr/local/include/httplib.h https://raw.githubusercontent.com/yhirose/cpp-httplib/master/httplib.h
 
-# nlohmann/json
-RUN echo "Instalando nlohmann/json..." && \
-    mkdir -p /usr/local/include/nlohmann && \
-    wget -q -O /tmp/json.hpp https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp && \
-    mv /tmp/json.hpp /usr/local/include/nlohmann/json.hpp && \
-    test -f /usr/local/include/nlohmann/json.hpp && echo "JSON OK" || (echo "JSON FALHOU" && exit 1)
-
+# Diretório de trabalho
 WORKDIR /app
+
+# Copia os arquivos do projeto para o contêiner
 COPY . /app
 
-RUN echo "Compilando o servidor..." && \
+# Compila o projeto usando o Makefile
+RUN echo "Compilando o projeto SudokuValidator..." && \
     make && \
-    test -f /app/diep_server && echo "Compilação OK" || (echo "Compilação FALHOU" && exit 1)
+    test -f bin/SudokuValidator && echo "Compilação OK" || (echo "Compilação FALHOU" && exit 1)
 
+# Porta exposta
 EXPOSE 9002
-CMD ["./diep_server"]
+
+# Comando para executar o programa
+CMD ["bin/SudokuValidator"]
