@@ -82,13 +82,28 @@ void* handle_connection(void* arg) {
 
     buffer[received] = '\0';
 
+    // Adicionar suporte para requisições OPTIONS (CORS preflight)
+    if (strncmp(buffer, "OPTIONS", 7) == 0) {
+        const char* cors_headers =
+            "HTTP/1.1 204 No Content\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+            "Access-Control-Allow-Headers: Content-Type\r\n"
+            "\r\n";
+        send(client_socket, cors_headers, strlen(cors_headers), 0);
+        close(client_socket);
+        return NULL;
+    }
+
     if (strncmp(buffer, "GET /state", 10) == 0) {
         update_fps();
         char response[BUF_SIZE * 4];
         int pos = 0;
 
         pos += sprintf(response + pos,
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+            "HTTP/1.1 200 OK\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Type: application/json\r\n\r\n");
         pos += sprintf(response + pos, "{");
         pos += sprintf(response + pos, "\"fps\":%d,", current_fps);
         pos += sprintf(response + pos, "\"total_objects\":%d,", total_objects);
@@ -125,7 +140,10 @@ void* handle_connection(void* arg) {
                 add_new_object(x, y, vx, vy, type);
             }
         }
-        const char* ok = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nOK";
+        const char* ok =
+            "HTTP/1.1 200 OK\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Type: text/plain\r\n\r\nOK";
         send(client_socket, ok, strlen(ok), 0);
 
     } else {
@@ -140,7 +158,10 @@ void* handle_connection(void* arg) {
                 strcat(path, start);
             serve_file(client_socket, path);
         } else {
-            const char* nf = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nNot found";
+            const char* nf =
+                "HTTP/1.1 404 Not Found\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Content-Type: text/plain\r\n\r\nNot found";
             send(client_socket, nf, strlen(nf), 0);
         }
     }
