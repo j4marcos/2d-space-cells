@@ -29,9 +29,31 @@ let objects = [];
 let lastFrame = performance.now();
 let fps = 0;
 
-function draw() {
+function draw(data) {
     fieldCtx.clearRect(0, 0, fieldCanvas.width, fieldCanvas.height);
     // Draw grid based on thread count? (optional)
+
+    // Draw grid based on thread count
+    const threadCount = Math.sqrt(data.thread_count); // Assuming objects.length represents thread count
+    const gridSize = fieldCanvas.width / threadCount;
+
+
+    fieldCtx.strokeStyle = '#444';
+    fieldCtx.lineWidth = 1;
+
+    for (let i = 1; i < threadCount; i++) {
+        // Vertical lines
+        fieldCtx.beginPath();
+        fieldCtx.moveTo(i * gridSize, 0);
+        fieldCtx.lineTo(i * gridSize, fieldCanvas.height);
+        fieldCtx.stroke();
+
+        // Horizontal lines
+        fieldCtx.beginPath();
+        fieldCtx.moveTo(0, i * gridSize);
+        fieldCtx.lineTo(fieldCanvas.width, i * gridSize);
+        fieldCtx.stroke();
+    }
 
     for (let obj of objects) {
         fieldCtx.save();
@@ -59,8 +81,7 @@ function update() {
         .then(response => response.json())
         .then(data => {
             objects = data.objects || [];
-            draw();
-
+            draw(data);
 
             // Calculate FPS
             const now = performance.now();
