@@ -1,2 +1,2 @@
-# 2d-space-multiprocess
+# 2d-space-cells
 projeto de SO com paralelismo no processamento do mapa
