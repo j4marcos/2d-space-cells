@@ -8,11 +8,6 @@
 #include "fhysics.h"
 #include <math.h>
 
-// --- Configuration: fixed number of quadrants/threads ---
-#ifndef NUM_QUADRANTS
-#define NUM_QUADRANTS 16  // must be a perfect square (e.g., 4, 9, 16, 25...)
-#endif
-
 ObjectList* quadrant_lists = NULL;
 double       total_update_time = 0;
 pthread_t  threads[NUM_QUADRANTS];
@@ -25,7 +20,7 @@ static void init_quadrants() {
         quadrant_lists = malloc(sizeof(ObjectList) * NUM_QUADRANTS);
         for (int i = 0; i < NUM_QUADRANTS; i++) {
             quadrant_lists[i].count    = 0;
-    quadrant_lists[i].capacity = 16;
+    quadrant_lists[i].capacity = NUM_QUADRANTS;
        quadrant_lists[i].items    = malloc(sizeof(Object*) * quadrant_lists[i].capacity);
        }
     }

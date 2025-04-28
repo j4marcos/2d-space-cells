@@ -182,7 +182,7 @@ void* start_http_server(void* arg) {
     server_address.sin_addr.s_addr = INADDR_ANY;
     if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) { perror("bind"); exit(1); }
     if (listen(server_socket, 10) < 0) { perror("listen"); exit(1); }
-    printf("[SERVER] HTTP running on port %d\n", port);
+    printf("[SERVER] HTTP running on http://localhost:%d\n", port);
     while (1) {
         struct sockaddr_in client_address;
         socklen_t client_len = sizeof(client_address);

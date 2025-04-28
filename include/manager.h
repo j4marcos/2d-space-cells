@@ -10,7 +10,7 @@
 
 #define MAX_OBJECTS 4096
 #ifndef NUM_QUADRANTS
-#define NUM_QUADRANTS 16
+#define NUM_QUADRANTS 4 // mudar para 1, 4, ou 16
 #endif
 
 // Dynamic array of Objects for each quadrant
