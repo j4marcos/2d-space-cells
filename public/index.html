@@ -108,7 +108,7 @@ function update() {
 
             // Update main info
             document.getElementById('info').innerText =
-                `Objetos: ${objects.length} | FPS: ${fps} | Total Threads: ${data.thread_count} | Update: ${data.update_time.toFixed(6)}s`;
+                `Objetos: ${objects.length} | FPS: ${fps} | Total Threads: ${data.thread_count} | Total Update Time: ${data.update_time.toFixed(6)}s`;
 
             // Update thread times
             const times = data.thread_times.map(t => t.toFixed(6) + 's').join(', ');
