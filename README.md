@@ -8,16 +8,17 @@ Este repositório contém um simulador 2D de física distribuído em quadrantes,
 
 ## Projeto
 
-- campo de simulaçao de partículas/objetos em um campo 2D, com detecção de colisões (entre objetos e limites)
+- Simulador de partículas/objetos em um campo 2D, com detecção de colisões (entre objetos e limites).
+- Divisão da carga de processamento em quadrantes para cálculo paralelo de toda a área.
+- Cada quadrante conta com uma *thread* responsável pelo processamento dos objetos dentro da subárea.
+- O número de quadrantes pode ser ajustado em `include/manager.h` (constante `NUM_QUADRANTS`). Basta editar para utilizar mais ou menos threads.
+- Interface visual que permite clicar para criar objetos com velocidade aleatória e visualizar estatísticas em tempo real.
 
-- divisão de carga de processamento em quadrantes para cálculo paralelo da area total.
+## Deploy (CI/CD)
 
-- cada quadrante tem uma tread responsavel pelo processamento individual dos objetso dentro da subarea.
+- O jogo está disponível automaticamente em http://167.235.75.94:8080/.
+- Devido a limitações de rede da VPS, a atualização em tempo real pode apresentar atrasos; recomenda-se executá-lo localmente para obter melhor desempenho e experiência.
 
-- o numero de quadrantes pode ser editado em ./include/manager.h NUM_QUADRANTS
-  edite para comparar mais ou menos treads
-
-- interface visual onde é possivel clicar para criar objetos com velocidade aleatoria, e visualizar estatisticas.
 
 ## ⚙️ Dependências
 
