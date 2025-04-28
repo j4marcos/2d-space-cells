@@ -9,37 +9,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Login no Docker Hub
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
+          registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build e push da imagem
+      - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
+          file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-multiprocess:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-cells:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-cells:${{ github.sha }}
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH (senha)
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          port: 22             # ajuste se usar porta diferente
+          port: 22
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-multiprocess:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-cells:latest
             docker rm -f simulacao || true
             docker run -d \
               --name simulacao \
               -p 8080:8080 \
-              ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-multiprocess:latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/2d-space-cells:latest
