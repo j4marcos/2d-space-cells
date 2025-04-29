@@ -1,3 +1,6 @@
+
+//Gerecia a simulação de objetos em quadrantes e distribui o processamento entre threads
+
 #include "manager.h"
 #include "inputs.h"
 #include "worker.h"
@@ -9,7 +12,9 @@
 #include <unistd.h>
 #include <math.h>
 
+
 ObjectList* quadrant_lists = NULL;
+
 double      total_update_time = 0;
 int         total_objects = 0;
 Object      objects[MAX_OBJECTS];
@@ -21,6 +26,7 @@ static pthread_cond_t  done_cond = PTHREAD_COND_INITIALIZER;
 static int             done_count = 0;
 
 // Função auxiliar para a thread pool
+//Envolve execução de uma tarefa e sinaliza quando termina ( evita condição de corrida)
 void task_wrapper(void* arg) {
     ThreadData* data = (ThreadData*)arg;
     process_quadrant(data);
@@ -56,11 +62,11 @@ static void clear_quadrants() {
     }
 }
 
-// Adiciona objeto ao quadrante
+// Adiciona objeto ao quadrante especificado
 static void add_to_quadrant(int q, Object* obj) {
     ObjectList* L = &quadrant_lists[q];
-    if (L->count == L->capacity) {
-        L->capacity *= 2;
+    if (L->count == L->capacity) {//dobra a capacidade do quadrante se estiver cheio
+        L->capacity *= 2; 
         L->items = realloc(L->items, sizeof(Object*) * L->capacity);
     }
     L->items[L->count++] = obj;
@@ -102,7 +108,7 @@ void update_simulation() {
         add_to_quadrant(q, o);
     }
 
-    // Prepara e adiciona as tarefas à thread pool
+    // Prepara e adiciona as tarefas à thread pool.
     done_count = 0;
     for (int i = 0; i < NUM_QUADRANTS; i++) {
         thread_data[i].id = i;
@@ -111,19 +117,19 @@ void update_simulation() {
         thread_pool_add_task(task_wrapper, &thread_data[i]);
     }
 
-    // Espera todas tarefas terminarem
+    // Espera todas tarefas terminarem.
     pthread_mutex_lock(&done_mutex);
     while (done_count < NUM_QUADRANTS) {
         pthread_cond_wait(&done_cond, &done_mutex);
     }
     pthread_mutex_unlock(&done_mutex);
 
-    // Calcula tempo total de atualização
+    // Calcula tempo total de atualização.
     double frame_end = (double)clock() / CLOCKS_PER_SEC;
     total_update_time = frame_end - frame_start;
 }
 
-// Finaliza o sistema
+// Finaliza o sistema, destruindo a thread pool e liberando memória dos quadrantes.
 void finalize_manager() {
     thread_pool_destroy();
     free_quadrants();

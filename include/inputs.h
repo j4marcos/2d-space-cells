@@ -2,18 +2,20 @@
 #ifndef INPUTS_H
 #define INPUTS_H
 
-// Structure for new object input (0=circle,1=square)
+// Estrutura para representar entrada de novo objeto
 typedef struct {
-    float x, y;
-    float vx, vy;
+    float x, y; 
+    float vx, vy; 
     int   type;
 } NewObject;
 
-// Initialize input queue
+//inicializa a fila de entrada para novos objetos
 void initialize_inputs();
-// Retrieve up to max_objs new objects; clears queue
+
+//Recupera objetos da fila e limpa a fila pós leitura
 int  get_new_objects(NewObject* buffer, int max_objs);
-// Enqueue a new object for simulation
+
+//Adiciona um novo objeto à fila de entrada
 void add_new_object(float x, float y, float vx, float vy, int type);
 
 #endif // INPUTS_H

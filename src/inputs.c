@@ -25,7 +25,7 @@ void add_new_object(float x, float y, float vx, float vy, int type) {
     pthread_mutex_unlock(&mutex);
 }
 
-// Obtém até max_objs novos objetos e limpa a fila
+// Recupera objetos da fila e limpa a fila após a leitura.
 int get_new_objects(NewObject* buffer, int max_objs) {
     pthread_mutex_lock(&mutex);
     int n = (queue_head < max_objs) ? queue_head : max_objs;

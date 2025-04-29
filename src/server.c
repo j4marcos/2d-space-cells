@@ -22,11 +22,12 @@ extern Object objects[];
 extern double total_update_time;
 extern ThreadData thread_data[NUM_QUADRANTS];
 
-// FPS variables
+// Variaveis para calcular FPS
  int frames = 0;
  double last_fps_time = 0;
  int current_fps = 0;
 
+//Atualiza o  FPS
 void update_fps() {
     double now = (double)clock() / CLOCKS_PER_SEC;
     frames++;
@@ -36,7 +37,7 @@ void update_fps() {
         last_fps_time = now;
     }
 }
-
+//Serve um arquivo estático para o cliente por meio do socket
 void serve_file(int client_fd, const char* path) {
     FILE* file = fopen(path, "rb");
     if (!file) {
@@ -45,15 +46,18 @@ void serve_file(int client_fd, const char* path) {
         return;
     }
 
+    //move o ponteiro do arquivo para o final para obter o tamanho
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
     rewind(file);
 
+    
+    //Define o cabeçalho do http de acordo com a extensão do arquivo
     char header[256];
     const char* type = strstr(path, ".js") ? "application/javascript" :
                        strstr(path, ".css") ? "text/css" :
                        "text/html";
-
+                   
     snprintf(header, sizeof(header),
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
@@ -61,6 +65,7 @@ void serve_file(int client_fd, const char* path) {
 
     send(client_fd, header, strlen(header), 0);
 
+    //Envia conteúdo por partes no buffer
     char buffer[BUF_SIZE];
     size_t read_bytes;
     while ((read_bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
@@ -69,6 +74,7 @@ void serve_file(int client_fd, const char* path) {
     fclose(file);
 }
 
+//lida com uma conexão http.
 void* handle_connection(void* arg) {
     int client_socket = *(int*)arg;
     free(arg);
@@ -100,6 +106,7 @@ void* handle_connection(void* arg) {
         char response[BUF_SIZE * 4];
         int pos = 0;
 
+        //Prepara a resposta JSON com o estado da simulação 
         pos += sprintf(response + pos,
             "HTTP/1.1 200 OK\r\n"
             "Access-Control-Allow-Origin: *\r\n"
@@ -129,7 +136,7 @@ void* handle_connection(void* arg) {
         pos += sprintf(response + pos, "]}");
 
         send(client_socket, response, pos, 0);
-
+    //requisição do POST para adicionar novo objeto
     } else if (strncmp(buffer, "POST /input", 11) == 0) {
         char* body = strstr(buffer, "\r\n\r\n");
         if (body) {
@@ -146,6 +153,7 @@ void* handle_connection(void* arg) {
             "Content-Type: text/plain\r\n\r\nOK";
         send(client_socket, ok, strlen(ok), 0);
 
+    // Requisição para arquivos estáticos ou rota desconhecida
     } else {
         if (strncmp(buffer, "GET /", 5) == 0) {
             char path[256] = "public";
@@ -170,9 +178,10 @@ void* handle_connection(void* arg) {
     return NULL;
 }
 
+// Inicia o servidor HTTP
 void* start_http_server(void* arg) {
     int port = *(int*)arg;
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    int server_socket = socket(AF_INET, SOCK_STREAM, 0); // Cria o socket
     if (server_socket == -1) { perror("socket"); exit(1); }
     int opt = 1;
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -183,6 +192,8 @@ void* start_http_server(void* arg) {
     if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) { perror("bind"); exit(1); }
     if (listen(server_socket, 10) < 0) { perror("listen"); exit(1); }
     printf("[SERVER] HTTP running on http://localhost:%d\n", port);
+    
+    //loop para aceitar conexões
     while (1) {
         struct sockaddr_in client_address;
         socklen_t client_len = sizeof(client_address);

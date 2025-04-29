@@ -22,14 +22,16 @@
 <canvas id="field" width="1000" height="1000"></canvas>
 
 <script>
+
 const fieldCanvas = document.getElementById('field');
 const fieldCtx = fieldCanvas.getContext('2d');
 
+//variáveis para calcular fps e obter objetos
 let objects = [];
 let lastFrame = performance.now();
 let fps = 0;
 
-// Função para desenhar um polígono regular (usada para triângulo e pentágono)
+//função para desenhar um polígono regular 
 function drawPolygon(ctx, sides, radius) {
     ctx.beginPath();
     for (let i = 0; i < sides; i++) {
@@ -46,6 +48,7 @@ function drawPolygon(ctx, sides, radius) {
     ctx.fill();
 }
 
+//função para desenhar os objetos e a grade da simulação
 function draw(data) {
     fieldCtx.clearRect(0, 0, fieldCanvas.width, fieldCanvas.height);
 
@@ -94,6 +97,7 @@ function draw(data) {
     }
 }
 
+//função para atualizar o estado da simulação
 function update() {
     fetch('/state')
         .then(response => response.json())
@@ -117,10 +121,10 @@ function update() {
         .catch(err => console.error('Erro ao buscar estado:', err));
 }
 
-// Fetch state ~30 times per second
+//atualiza o estado da simulação  aprox. 30 vezes/s
 setInterval(update, 33);
 
-// evento de clique para incluir novos objetos
+//evento de clique para incluir novos objetos
 fieldCanvas.addEventListener('click', e => {
     const rect = fieldCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;

@@ -1,8 +1,8 @@
 
-// physics.c
 #include "fhysics.h"
 #include <math.h>
 
+//Trata colisões entre objetos e o limite do mundo
 void handle_collisions(Object* object) {
     if (object->x < 0) {
         object->x = 0;
@@ -20,7 +20,7 @@ void handle_collisions(Object* object) {
         object->vy = -object->vy;
     }
 }
-
+//Resolve colisões entre objetos 
 void resolve_object_collision(Object* a, Object* b) {
     float dx = b->x - a->x;
     float dy = b->y - a->y;
@@ -28,7 +28,7 @@ void resolve_object_collision(Object* a, Object* b) {
     float minDist = COLLISION_RADIUS * 2;
 
     if (dist2 <= minDist * minDist) {
-        // Elastic collision: swap velocities
+        // Troca velocidades entre objetos (colisão elástica)
         float tvx = a->vx;
         float tvy = a->vy;
         a->vx = b->vx;

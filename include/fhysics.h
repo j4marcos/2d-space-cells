@@ -1,26 +1,24 @@
-// fhysics.h
 #ifndef FHYSICS_H
 #define FHYSICS_H
 
-// World bounds
+//limites do mundo
 #define LIMIT_X 1000
 #define LIMIT_Y 1000
 
-// Collision radius for objects (assumed circular)
-#define COLLISION_RADIUS 10.0f  // antes era 5.0f
+// Raio de colisão dos objetos
+#define COLLISION_RADIUS 10.0f  
 
-
-// Simulation object
+//estrutura dos objetos
 typedef struct {
-    float x, y;
-    float vx, vy;
+    float x, y; 
+    float vx, vy; 
     int   type;
 } Object;
 
-// Handle collisions with world boundaries
+// Trata colisões de objetos com os limites do mundo
 void handle_collisions(Object* object);
 
-// Resolve elastic collision between two objects in the same quadrant
+//Resolve colisões entre dois objetos
 void resolve_object_collision(Object* a, Object* b);
 
 #endif // FHYSICS_H
